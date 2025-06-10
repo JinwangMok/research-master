@@ -186,6 +186,25 @@ if ($modelList -notmatch "mixtral") {
     Write-Host "  Ollama model is ready" -ForegroundColor Green
 }
 
+# After ensuring the model is available, restart all services so
+# containers that depend on Ollama can start successfully.
+Write-Host "`nRestarting services..." -ForegroundColor Yellow
+docker-compose up -d
+
+Write-Host "`nWaiting for services to become healthy..." -ForegroundColor Yellow
+Start-Sleep -Seconds 30
+
+Write-Host "`nRechecking service status..." -ForegroundColor Yellow
+foreach ($service in $services) {
+    try {
+        $response = Invoke-WebRequest -Uri "http://localhost:$($service.Port)/health" -UseBasicParsing -TimeoutSec 5
+        Write-Host "  $($service.Name) is responding" -ForegroundColor Green
+    } catch {
+        Write-Host "  $($service.Name) is not responding" -ForegroundColor Red
+        $allHealthy = $false
+    }
+}
+
 # 12. Start desktop app
 if ($DevMode) {
     Write-Host "`nStarting desktop app in development mode..." -ForegroundColor Yellow
