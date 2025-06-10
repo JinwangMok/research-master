@@ -165,7 +165,9 @@ export class CodeDeveloperService {
             res.json(project);
         } catch (error) {
             console.error("Error creating project:", error);
-            res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+            res.status(500).json({
+                error: error instanceof Error ? error.message : String(error),
+            });
         }
     }
 
@@ -241,7 +243,9 @@ export class CodeDeveloperService {
             },
         };
 
-        const structure = structures[project.language as keyof typeof structures] || structures.python;
+        const structure =
+            structures[project.language as keyof typeof structures] ||
+            structures.python;
         project.structure = structure;
 
         // Create files and directories
@@ -330,7 +334,9 @@ export class CodeDeveloperService {
             });
         } catch (error) {
             console.error("Error generating code:", error);
-            res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+            res.status(500).json({
+                error: error instanceof Error ? error.message : String(error),
+            });
         }
     }
 
@@ -540,7 +546,9 @@ Generate tests that:
             res.json(testResult);
         } catch (error) {
             console.error("Error running tests:", error);
-            res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+            res.status(500).json({
+                error: error instanceof Error ? error.message : String(error),
+            });
         }
     }
 
@@ -596,7 +604,9 @@ Generate tests that:
             });
         } catch (error) {
             console.error("Error committing:", error);
-            res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+            res.status(500).json({
+                error: error instanceof Error ? error.message : String(error),
+            });
         }
     }
 
@@ -1075,20 +1085,26 @@ logs/
         try {
             if (project.language === "python") {
                 // Update requirements.txt if it exists
-                const requirementsPath = path.join(project.path, "requirements.txt");
+                const requirementsPath = path.join(
+                    project.path,
+                    "requirements.txt"
+                );
                 if (await fs.pathExists(requirementsPath)) {
                     // Install dependencies
                     await execAsync("pip install -r requirements.txt", {
-                        cwd: project.path
+                        cwd: project.path,
                     });
                 }
-            } else if (project.language === "javascript" || project.language === "typescript") {
+            } else if (
+                project.language === "javascript" ||
+                project.language === "typescript"
+            ) {
                 // Update package.json dependencies
                 const packageJsonPath = path.join(project.path, "package.json");
                 if (await fs.pathExists(packageJsonPath)) {
                     // Install dependencies
                     await execAsync("npm install", {
-                        cwd: project.path
+                        cwd: project.path,
                     });
                 }
             }

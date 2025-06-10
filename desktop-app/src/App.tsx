@@ -158,7 +158,7 @@ const App: React.FC = () => {
 
     // Connect to MCP server
     useEffect(() => {
-        const socketInstance = io("http://localhost:3000", {
+        const socketInstance = io("http://localhost:3001", {
             reconnection: true,
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,

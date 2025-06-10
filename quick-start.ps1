@@ -93,13 +93,13 @@ GIT_USER_EMAIL=research.bot@localhost
 OLLAMA_MODEL=mixtral:8x7b-instruct-v0.1-q4_K_M
 
 # Service ports
-MCP_PORT=3000
+MCP_PORT=3001
 CRAWLER_PORT=5000
 CODE_DEV_PORT=8080
 DOC_GEN_PORT=5001
 
 # Other settings
-CLIENT_URL=http://localhost:3000
+CLIENT_URL=http://localhost:3001
 REDIS_HOST=redis
 REDIS_PORT=6379
 NODE_ENV=development
@@ -158,7 +158,7 @@ Start-Sleep -Seconds 30
 
 Write-Host "`nChecking service status..." -ForegroundColor Yellow
 $services = @(
-    @{Name="MCP Server"; Port=3000},
+    @{Name="MCP Server"; Port=3001},
     @{Name="Research Crawler"; Port=5000},
     @{Name="Code Developer"; Port=8080},
     @{Name="Document Generator"; Port=5001}
@@ -220,7 +220,7 @@ if ($DevMode) {
 # 14. Option to open browser
 $openBrowser = Read-Host "`nOpen browser to check the system? (Y/N)"
 if ($openBrowser -eq 'Y') {
-    Start-Process "http://localhost:3000"
+    Start-Process "http://localhost:3001"
 }
 
 Write-Host "`nScript complete. If there are issues, check the logs folder." -ForegroundColor Cyan

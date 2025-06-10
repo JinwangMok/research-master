@@ -50,9 +50,9 @@ function createWindow() {
         show: false,
     });
 
-    // Load the app - IMPORTANT: Use port 3000 for React dev server
+    // Load the app - IMPORTANT: Use port 3001 for React dev server
     const startUrl = isDev
-        ? "http://localhost:3000"
+        ? "http://localhost:3001"
         : `file://${path.join(__dirname, "../build/index.html")}`;
 
     mainWindow.loadURL(startUrl);

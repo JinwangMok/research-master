@@ -21,6 +21,6 @@ COPY package*.json ./
 RUN mkdir -p /workspace /logs && \
     chown -R node:node /app /workspace /logs
 USER node
-EXPOSE 3000
+EXPOSE 3001
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "dist/index.js"]

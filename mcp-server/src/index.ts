@@ -100,9 +100,7 @@ class MCPHandler {
             // Handle MCP messages
             socket.on("mcp:request", async (message: MCPMessage) => {
                 try {
-                    const response = await this.handleMCPRequest(
-                        message
-                    );
+                    const response = await this.handleMCPRequest(message);
                     socket.emit("mcp:response", response);
                 } catch (error) {
                     socket.emit("mcp:error", {
@@ -414,7 +412,7 @@ app.get("/sessions", async (_, res) => {
             return data ? JSON.parse(data) : null;
         })
     );
-    res.json(sessions.filter(session => session !== null));
+    res.json(sessions.filter((session) => session !== null));
 });
 
 app.get("/session/:id", async (req, res) => {
@@ -427,7 +425,7 @@ app.get("/session/:id", async (req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
     console.log(`MCP Server running on port ${PORT}`);
 });
