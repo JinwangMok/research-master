@@ -236,4 +236,180 @@ nvidia-smi -l 1
 
 ---
 
-**준비되셨나요?** 🎉 이제 자율 연구-개발 시스템을 사용해보세요!
+# ✅ 첫 실행 체크리스트
+
+## 1. 환경 설정
+
+```bash
+# 1. .env 파일 생성 (최소 설정)
+cp .env.example .env
+
+# 2. Git 사용자 정보만 수정
+nano .env
+# GIT_USER_NAME과 GIT_USER_EMAIL을 본인 정보로 변경
+
+# 3. 나머지는 기본값 사용!
+```
+
+## 2. 시스템 시작 전 확인
+
+```bash
+# Docker 실행 확인
+docker --version
+docker ps
+
+# GPU 확인 (선택사항)
+nvidia-smi
+
+# 포트 사용 확인
+lsof -i :3000  # 사용 중이면 .env에서 포트 변경
+```
+
+## 3. 첫 실행
+
+```bash
+# 설정 스크립트 실행
+./scripts/setup.sh
+
+# 시스템 시작
+./scripts/start.sh
+
+# 로그 모니터링 (다른 터미널에서)
+./scripts/logs.sh
+```
+
+## 🎯 API 키 없이 사용 가능한 기능
+
+### ✅ 완전히 작동하는 기능:
+
+1. **arXiv 논문 검색** - CS, 물리학, 수학 등
+2. **Google Scholar 크롤링** - 모든 학문 분야
+3. **코드 생성 및 테스트** - 모든 프로그래밍 언어
+4. **문서 생성** - PDF, LaTeX, PPT
+5. **Git 버전 관리** - 자동 커밋
+
+### ⚠️ 제한적으로 작동하는 기능:
+
+1. **IEEE 논문** - API 키 필요 (전기전자공학)
+2. **CORE 논문** - API 키 필요 (오픈 액세스)
+3. **Semantic Scholar** - API 키 필요 (인용 분석)
+
+## 🏃‍♂️ 첫 번째 연구 프로젝트 예시
+
+### API 키 없이 시도해볼 수 있는 주제:
+
+1. **컴퓨터 과학 (arXiv 활용)**
+
+    - "연합학습을 위한 차등 프라이버시 알고리즘"
+    - "그래프 신경망 기반 추천 시스템"
+    - "양자 컴퓨팅 시뮬레이터 최적화"
+
+2. **인공지능/머신러닝 (arXiv + Scholar)**
+
+    - "Transformer 모델의 메모리 효율적 학습 방법"
+    - "자율주행을 위한 실시간 객체 탐지"
+    - "의료 영상에서의 few-shot 학습"
+
+3. **일반 공학 (Google Scholar)**
+    - "스마트 시티를 위한 IoT 아키텍처"
+    - "재생 에너지 최적화 알고리즘"
+    - "드론 군집 제어 시스템"
+
+## 🔧 일반적인 문제 해결
+
+### 1. Ollama 모델 다운로드 실패
+
+```bash
+# 수동으로 모델 다운로드
+docker exec -it research-ollama ollama pull mixtral:8x7b-instruct-v0.1-q4_K_M
+
+# 더 작은 모델로 변경
+docker exec -it research-ollama ollama pull llama2:7b-chat-q4_K_M
+# 그리고 .env 파일에서 OLLAMA_MODEL 변경
+```
+
+### 2. 메모리 부족
+
+```bash
+# .env 파일 수정
+OLLAMA_MODEL=llama2:7b-chat-q4_K_M  # 더 작은 모델
+MAX_PAPERS_PER_SEARCH=10             # 검색 논문 수 줄이기
+```
+
+### 3. 포트 충돌
+
+```bash
+# .env 파일에서 포트 변경
+MCP_PORT=3001
+CRAWLER_PORT=5001
+# ...
+```
+
+### 4. Docker 권한 문제
+
+```bash
+# 현재 사용자를 docker 그룹에 추가
+sudo usermod -aG docker $USER
+# 로그아웃 후 다시 로그인
+```
+
+## 📊 성능 모니터링
+
+```bash
+# GPU 사용량 실시간 모니터링
+watch -n 1 nvidia-smi
+
+# Docker 리소스 사용량
+docker stats
+
+# 서비스 상태 확인
+curl http://localhost:3000/health
+curl http://localhost:5000/health
+```
+
+## 💡 프로 팁
+
+1. **첫 실행은 느릴 수 있습니다**
+
+    - Ollama 모델 다운로드: 10-20분
+    - Docker 이미지 빌드: 5-10분
+
+2. **무료 리소스 최대 활용**
+
+    - arXiv는 프리프린트가 많아 최신 연구 접근 가능
+    - Google Scholar는 대부분의 논문 메타데이터 제공
+
+3. **점진적 확장**
+
+    - 처음엔 API 키 없이 시작
+    - 필요에 따라 하나씩 추가
+
+4. **캐싱 활용**
+    - 같은 검색은 캐시에서 제공
+    - Redis가 자동으로 관리
+
+## 🆘 도움이 필요하신가요?
+
+1. **로그 확인**
+
+    ```bash
+    ./scripts/logs.sh | grep ERROR
+    ```
+
+2. **서비스 재시작**
+
+    ```bash
+    docker-compose restart mcp-server
+    ```
+
+3. **전체 리셋**
+    ```bash
+    ./scripts/reset.sh  # 주의: 모든 데이터 삭제
+    ```
+
+---
+
+**준비되셨나요?** 🚀
+
+API 키 없이도 바로 시작할 수 있습니다.
+첫 연구 주제를 입력하고 자율 연구 시스템의 강력함을 경험해보세요!
