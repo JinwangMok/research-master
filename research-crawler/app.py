@@ -6,7 +6,12 @@ import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
 import arxiv
-import scholarly
+# Google Scholar는 scholarly 라이브러리 사용
+try:
+    from scholarly import scholarly
+except ImportError:
+    print("Warning: scholarly not installed. Google Scholar search will be limited.")
+    scholarly = None
 from datetime import datetime
 import redis
 import json
@@ -16,6 +21,7 @@ from urllib.parse import quote_plus
 import logging
 from concurrent.futures import ThreadPoolExecutor
 import feedparser
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

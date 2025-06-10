@@ -6,7 +6,6 @@ import { Server } from "socket.io";
 import Redis from "ioredis";
 import { v4 as uuidv4 } from "uuid";
 import cors from "cors";
-import { MCPProtocol } from "./protocols/mcp";
 import { OllamaService } from "./services/ollama";
 import { ResearchOrchestrator } from "./orchestrators/research";
 import { WorkflowManager } from "./managers/workflow";
@@ -87,7 +86,10 @@ app.use(express.urlencoded({ extended: true }));
 class MCPHandler {
     private sessions: Map<string, ResearchSession> = new Map();
 
-    constructor(private io: Server, private workflowManager: WorkflowManager) {
+    constructor(
+        private io: Server,
+        private workflowManager: WorkflowManager
+    ) {
         this.setupSocketHandlers();
     }
 
@@ -99,14 +101,16 @@ class MCPHandler {
             socket.on("mcp:request", async (message: MCPMessage) => {
                 try {
                     const response = await this.handleMCPRequest(
-                        message,
-                        socket.id
+                        message
                     );
                     socket.emit("mcp:response", response);
                 } catch (error) {
                     socket.emit("mcp:error", {
                         id: message.id,
-                        error: error.message,
+                        error:
+                            error instanceof Error
+                                ? error.message
+                                : String(error),
                         timestamp: Date.now(),
                     });
                 }
@@ -138,8 +142,8 @@ class MCPHandler {
     }
 
     private async handleMCPRequest(
-        message: MCPMessage,
-        socketId: string
+        message: MCPMessage
+        // socketId: string
     ): Promise<MCPMessage> {
         switch (message.method) {
             case "research.start":
@@ -395,22 +399,22 @@ class MCPHandler {
 }
 
 // Initialize MCP Handler
-const mcpHandler = new MCPHandler(io, workflowManager);
+new MCPHandler(io, workflowManager);
 
 // REST API Endpoints
-app.get("/health", (req, res) => {
+app.get("/health", (_, res) => {
     res.json({ status: "healthy", timestamp: new Date() });
 });
 
-app.get("/sessions", async (req, res) => {
+app.get("/sessions", async (_, res) => {
     const keys = await redis.keys("session:*");
     const sessions = await Promise.all(
         keys.map(async (key) => {
             const data = await redis.get(key);
-            return JSON.parse(data);
+            return data ? JSON.parse(data) : null;
         })
     );
-    res.json(sessions);
+    res.json(sessions.filter(session => session !== null));
 });
 
 app.get("/session/:id", async (req, res) => {

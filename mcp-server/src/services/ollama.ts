@@ -90,14 +90,14 @@ export class OllamaService extends EventEmitter {
 
     private async pullModel(modelName: string): Promise<void> {
         try {
-            const response = await this.client.post("/api/pull", {
+            await this.client.post("/api/pull", {
                 name: modelName,
                 stream: false,
             });
             console.log(`Model ${modelName} pulled successfully`);
         } catch (error) {
             throw new Error(
-                `Failed to pull model ${modelName}: ${error.message}`
+                `Failed to pull model ${modelName}: ${error instanceof Error ? error.message : String(error)}`
             );
         }
     }
@@ -176,7 +176,7 @@ export class OllamaService extends EventEmitter {
         options: GenerationOptions
     ): Promise<OllamaResponse> {
         const maxRetries = this.config.maxRetries || 3;
-        let lastError: Error;
+        let lastError: Error = new Error("No attempts made");
 
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
@@ -204,10 +204,10 @@ export class OllamaService extends EventEmitter {
 
                 return response.data;
             } catch (error) {
-                lastError = error;
+                lastError = error instanceof Error ? error : new Error(String(error));
                 console.error(
                     `Generation attempt ${attempt + 1} failed:`,
-                    error.message
+                    lastError.message
                 );
 
                 if (attempt < maxRetries - 1) {
@@ -258,7 +258,7 @@ export class OllamaService extends EventEmitter {
         try {
             return JSON.parse(response);
         } catch (error) {
-            throw new Error(`Failed to parse JSON response: ${error.message}`);
+            throw new Error(`Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 

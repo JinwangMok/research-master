@@ -165,7 +165,7 @@ export class CodeDeveloperService {
             res.json(project);
         } catch (error) {
             console.error("Error creating project:", error);
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
         }
     }
 
@@ -241,7 +241,7 @@ export class CodeDeveloperService {
             },
         };
 
-        const structure = structures[project.language] || structures.python;
+        const structure = structures[project.language as keyof typeof structures] || structures.python;
         project.structure = structure;
 
         // Create files and directories
@@ -330,7 +330,7 @@ export class CodeDeveloperService {
             });
         } catch (error) {
             console.error("Error generating code:", error);
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
         }
     }
 
@@ -540,7 +540,7 @@ Generate tests that:
             res.json(testResult);
         } catch (error) {
             console.error("Error running tests:", error);
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
         }
     }
 
@@ -556,7 +556,7 @@ Generate tests that:
             const fix = await this.generateTestFix(
                 project,
                 testFile,
-                failedTest.error
+                failedTest.error || "Unknown error"
             );
 
             if (fix) {
@@ -596,7 +596,7 @@ Generate tests that:
             });
         } catch (error) {
             console.error("Error committing:", error);
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
         }
     }
 
@@ -673,7 +673,7 @@ Generate tests that:
 
     // Helper methods
     private getTestFramework(language: string): string {
-        const frameworks = {
+        const frameworks: Record<string, string> = {
             python: "pytest",
             javascript: "jest",
             typescript: "jest",
@@ -685,7 +685,7 @@ Generate tests that:
     }
 
     private getTestCommand(language: string): string {
-        const commands = {
+        const commands: Record<string, string> = {
             python: "pytest --cov=src --cov-report=json tests/",
             javascript: "jest --coverage --json",
             typescript: "jest --coverage --json",
@@ -700,7 +700,7 @@ Generate tests that:
         const filename = path.basename(codePath);
         const nameWithoutExt = filename.split(".")[0];
 
-        const extensions = {
+        const extensions: Record<string, string> = {
             python: "_test.py",
             javascript: ".test.js",
             typescript: ".test.ts",
@@ -885,7 +885,7 @@ setup(
                 jest: "^27.0.0",
                 eslint: "^7.32.0",
                 nodemon: "^2.0.0",
-            },
+            } as Record<string, string>,
         };
 
         if (project.language === "typescript") {
@@ -1071,8 +1071,35 @@ logs/
         return type === "python" ? python + common : node + common;
     }
 
+    private async updateDependencies(project: CodeProject): Promise<void> {
+        try {
+            if (project.language === "python") {
+                // Update requirements.txt if it exists
+                const requirementsPath = path.join(project.path, "requirements.txt");
+                if (await fs.pathExists(requirementsPath)) {
+                    // Install dependencies
+                    await execAsync("pip install -r requirements.txt", {
+                        cwd: project.path
+                    });
+                }
+            } else if (project.language === "javascript" || project.language === "typescript") {
+                // Update package.json dependencies
+                const packageJsonPath = path.join(project.path, "package.json");
+                if (await fs.pathExists(packageJsonPath)) {
+                    // Install dependencies
+                    await execAsync("npm install", {
+                        cwd: project.path
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Error updating dependencies:", error);
+            // Don't throw - dependencies update failure shouldn't stop code generation
+        }
+    }
+
     private getDefaultTestTemplate(language: string, filePath: string): string {
-        const templates = {
+        const templates: Record<string, string> = {
             python: `import pytest
 from ${filePath.replace(".py", "").replace("src/", "")} import *
 

@@ -1,5 +1,4 @@
 # doc-generator/app.py
-
 from flask import Flask, request, jsonify, send_file
 import os
 import json

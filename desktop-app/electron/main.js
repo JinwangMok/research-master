@@ -1,5 +1,4 @@
 // desktop-app/electron/main.js
-
 const {
     app,
     BrowserWindow,
@@ -10,23 +9,26 @@ const {
 } = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
-const { autoUpdater } = require("electron-updater");
 
 let mainWindow;
 let mcpServerProcess;
 
 // Enable live reload for Electron in development
 if (isDev) {
-    require("electron-reload")(__dirname, {
-        electron: path.join(
-            __dirname,
-            "..",
-            "node_modules",
-            ".bin",
-            "electron"
-        ),
-        hardResetMethod: "exit",
-    });
+    try {
+        require("electron-reload")(__dirname, {
+            electron: path.join(
+                __dirname,
+                "..",
+                "node_modules",
+                ".bin",
+                "electron"
+            ),
+            hardResetMethod: "exit",
+        });
+    } catch (err) {
+        console.log("Error loading electron-reload:", err);
+    }
 }
 
 function createWindow() {
@@ -42,17 +44,18 @@ function createWindow() {
             preload: path.join(__dirname, "preload.js"),
         },
         icon: path.join(__dirname, "../assets/icon.png"),
-        titleBarStyle: "hiddenInset",
+        titleBarStyle:
+            process.platform === "darwin" ? "hiddenInset" : "default",
         backgroundColor: "#121212",
         show: false,
     });
 
-    // Load the app
-    mainWindow.loadURL(
-        isDev
-            ? "http://localhost:3001"
-            : `file://${path.join(__dirname, "../build/index.html")}`
-    );
+    // Load the app - IMPORTANT: Use port 3000 for React dev server
+    const startUrl = isDev
+        ? "http://localhost:3000"
+        : `file://${path.join(__dirname, "../build/index.html")}`;
+
+    mainWindow.loadURL(startUrl);
 
     // Show window when ready
     mainWindow.once("ready-to-show", () => {
@@ -71,11 +74,6 @@ function createWindow() {
 
     // Create application menu
     createMenu();
-
-    // Check for updates
-    if (!isDev) {
-        autoUpdater.checkForUpdatesAndNotify();
-    }
 }
 
 function createMenu() {
@@ -85,20 +83,24 @@ function createMenu() {
             submenu: [
                 {
                     label: "New Research",
-                    accelerator: "CmdOrCtrl+N",
+                    accelerator:
+                        process.platform === "darwin" ? "Cmd+N" : "Ctrl+N",
                     click: () => {
-                        mainWindow.webContents.send("menu:new-research");
+                        if (mainWindow) {
+                            mainWindow.webContents.send("menu:new-research");
+                        }
                     },
                 },
                 {
                     label: "Open Workspace",
-                    accelerator: "CmdOrCtrl+O",
+                    accelerator:
+                        process.platform === "darwin" ? "Cmd+O" : "Ctrl+O",
                     click: async () => {
                         const result = await dialog.showOpenDialog(mainWindow, {
                             properties: ["openDirectory"],
                         });
 
-                        if (!result.canceled) {
+                        if (!result.canceled && mainWindow) {
                             mainWindow.webContents.send(
                                 "menu:open-workspace",
                                 result.filePaths[0]
@@ -113,6 +115,7 @@ function createMenu() {
                         {
                             label: "As PDF",
                             click: () =>
+                                mainWindow &&
                                 mainWindow.webContents.send(
                                     "menu:export",
                                     "pdf"
@@ -121,6 +124,7 @@ function createMenu() {
                         {
                             label: "As LaTeX",
                             click: () =>
+                                mainWindow &&
                                 mainWindow.webContents.send(
                                     "menu:export",
                                     "latex"
@@ -129,6 +133,7 @@ function createMenu() {
                         {
                             label: "As PowerPoint",
                             click: () =>
+                                mainWindow &&
                                 mainWindow.webContents.send(
                                     "menu:export",
                                     "pptx"
@@ -150,22 +155,50 @@ function createMenu() {
         {
             label: "Edit",
             submenu: [
-                { label: "Undo", accelerator: "CmdOrCtrl+Z", role: "undo" },
+                {
+                    label: "Undo",
+                    accelerator:
+                        process.platform === "darwin" ? "Cmd+Z" : "Ctrl+Z",
+                    role: "undo",
+                },
                 {
                     label: "Redo",
-                    accelerator: "Shift+CmdOrCtrl+Z",
+                    accelerator:
+                        process.platform === "darwin"
+                            ? "Shift+Cmd+Z"
+                            : "Ctrl+Y",
                     role: "redo",
                 },
                 { type: "separator" },
-                { label: "Cut", accelerator: "CmdOrCtrl+X", role: "cut" },
-                { label: "Copy", accelerator: "CmdOrCtrl+C", role: "copy" },
-                { label: "Paste", accelerator: "CmdOrCtrl+V", role: "paste" },
+                {
+                    label: "Cut",
+                    accelerator:
+                        process.platform === "darwin" ? "Cmd+X" : "Ctrl+X",
+                    role: "cut",
+                },
+                {
+                    label: "Copy",
+                    accelerator:
+                        process.platform === "darwin" ? "Cmd+C" : "Ctrl+C",
+                    role: "copy",
+                },
+                {
+                    label: "Paste",
+                    accelerator:
+                        process.platform === "darwin" ? "Cmd+V" : "Ctrl+V",
+                    role: "paste",
+                },
             ],
         },
         {
             label: "View",
             submenu: [
-                { label: "Reload", accelerator: "CmdOrCtrl+R", role: "reload" },
+                {
+                    label: "Reload",
+                    accelerator:
+                        process.platform === "darwin" ? "Cmd+R" : "Ctrl+R",
+                    role: "reload",
+                },
                 {
                     label: "Toggle Developer Tools",
                     accelerator:
@@ -173,23 +206,30 @@ function createMenu() {
                             ? "Alt+Command+I"
                             : "Ctrl+Shift+I",
                     click: () => {
-                        mainWindow.webContents.toggleDevTools();
+                        if (mainWindow) {
+                            mainWindow.webContents.toggleDevTools();
+                        }
                     },
                 },
                 { type: "separator" },
                 {
                     label: "Actual Size",
-                    accelerator: "CmdOrCtrl+0",
+                    accelerator:
+                        process.platform === "darwin" ? "Cmd+0" : "Ctrl+0",
                     role: "resetZoom",
                 },
                 {
                     label: "Zoom In",
-                    accelerator: "CmdOrCtrl+Plus",
+                    accelerator:
+                        process.platform === "darwin"
+                            ? "Cmd+Plus"
+                            : "Ctrl+Plus",
                     role: "zoomIn",
                 },
                 {
                     label: "Zoom Out",
-                    accelerator: "CmdOrCtrl+-",
+                    accelerator:
+                        process.platform === "darwin" ? "Cmd+-" : "Ctrl+-",
                     role: "zoomOut",
                 },
                 { type: "separator" },
@@ -205,26 +245,35 @@ function createMenu() {
             submenu: [
                 {
                     label: "Start Research",
-                    accelerator: "CmdOrCtrl+R",
+                    accelerator:
+                        process.platform === "darwin" ? "Cmd+R" : "Ctrl+R",
                     click: () =>
+                        mainWindow &&
                         mainWindow.webContents.send("menu:start-research"),
                 },
                 {
                     label: "View Progress",
-                    accelerator: "CmdOrCtrl+P",
+                    accelerator:
+                        process.platform === "darwin" ? "Cmd+P" : "Ctrl+P",
                     click: () =>
+                        mainWindow &&
                         mainWindow.webContents.send("menu:view-progress"),
                 },
                 { type: "separator" },
                 {
                     label: "Run Tests",
-                    accelerator: "CmdOrCtrl+T",
-                    click: () => mainWindow.webContents.send("menu:run-tests"),
+                    accelerator:
+                        process.platform === "darwin" ? "Cmd+T" : "Ctrl+T",
+                    click: () =>
+                        mainWindow &&
+                        mainWindow.webContents.send("menu:run-tests"),
                 },
                 {
                     label: "Generate Documentation",
-                    accelerator: "CmdOrCtrl+D",
+                    accelerator:
+                        process.platform === "darwin" ? "Cmd+D" : "Ctrl+D",
                     click: () =>
+                        mainWindow &&
                         mainWindow.webContents.send("menu:generate-docs"),
                 },
             ],
@@ -244,20 +293,24 @@ function createMenu() {
                                 : "Docker is not running",
                             detail: dockerStatus
                                 ? "All services are operational"
-                                : "Please start Docker to use the application",
+                                : "Please start Docker Desktop to use the application",
                         });
                     },
                 },
                 {
                     label: "Service Health",
                     click: () =>
+                        mainWindow &&
                         mainWindow.webContents.send("menu:check-health"),
                 },
                 { type: "separator" },
                 {
                     label: "Settings",
-                    accelerator: "CmdOrCtrl+,",
-                    click: () => mainWindow.webContents.send("menu:settings"),
+                    accelerator:
+                        process.platform === "darwin" ? "Cmd+," : "Ctrl+,",
+                    click: () =>
+                        mainWindow &&
+                        mainWindow.webContents.send("menu:settings"),
                 },
             ],
         },
@@ -305,39 +358,12 @@ function createMenu() {
 async function checkDockerStatus() {
     const { exec } = require("child_process");
     return new Promise((resolve) => {
-        exec("docker info", (error) => {
+        const command =
+            process.platform === "win32" ? "docker info" : "docker info";
+        exec(command, (error) => {
             resolve(!error);
         });
     });
-}
-
-// Start MCP server locally if in development
-async function startLocalMCPServer() {
-    if (!isDev) return;
-
-    const { spawn } = require("child_process");
-
-    console.log("Starting local MCP server...");
-
-    mcpServerProcess = spawn("npm", ["run", "start:mcp"], {
-        cwd: path.join(__dirname, "../../mcp-server"),
-        shell: true,
-    });
-
-    mcpServerProcess.stdout.on("data", (data) => {
-        console.log(`MCP Server: ${data}`);
-    });
-
-    mcpServerProcess.stderr.on("data", (data) => {
-        console.error(`MCP Server Error: ${data}`);
-    });
-
-    mcpServerProcess.on("close", (code) => {
-        console.log(`MCP Server exited with code ${code}`);
-    });
-
-    // Give the server time to start
-    await new Promise((resolve) => setTimeout(resolve, 5000));
 }
 
 // IPC Handlers
@@ -350,6 +376,8 @@ ipcMain.handle("check-docker-status", async () => {
 });
 
 ipcMain.handle("select-directory", async () => {
+    if (!mainWindow) return null;
+
     const result = await dialog.showOpenDialog(mainWindow, {
         properties: ["openDirectory"],
     });
@@ -358,26 +386,18 @@ ipcMain.handle("select-directory", async () => {
 });
 
 ipcMain.handle("save-file", async (event, options) => {
+    if (!mainWindow) return null;
+
     const result = await dialog.showSaveDialog(mainWindow, options);
     return result.canceled ? null : result.filePath;
 });
 
 // App event handlers
 app.whenReady().then(async () => {
-    // Start local MCP server in development
-    if (isDev) {
-        await startLocalMCPServer();
-    }
-
     createWindow();
 });
 
 app.on("window-all-closed", () => {
-    // Kill MCP server process if running
-    if (mcpServerProcess) {
-        mcpServerProcess.kill();
-    }
-
     if (process.platform !== "darwin") {
         app.quit();
     }
@@ -387,33 +407,6 @@ app.on("activate", () => {
     if (mainWindow === null) {
         createWindow();
     }
-});
-
-// Handle app updates
-autoUpdater.on("update-available", () => {
-    dialog.showMessageBox(mainWindow, {
-        type: "info",
-        title: "Update Available",
-        message:
-            "A new version is available. It will be downloaded in the background.",
-        buttons: ["OK"],
-    });
-});
-
-autoUpdater.on("update-downloaded", () => {
-    dialog
-        .showMessageBox(mainWindow, {
-            type: "info",
-            title: "Update Ready",
-            message:
-                "Update downloaded. The application will restart to apply the update.",
-            buttons: ["Restart Now", "Later"],
-        })
-        .then((result) => {
-            if (result.response === 0) {
-                autoUpdater.quitAndInstall();
-            }
-        });
 });
 
 // Prevent multiple instances

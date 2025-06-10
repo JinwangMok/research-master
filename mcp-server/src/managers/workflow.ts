@@ -3,7 +3,6 @@
 import { EventEmitter } from "events";
 import { Redis } from "ioredis";
 import axios from "axios";
-import { OllamaService } from "../services/ollama";
 import {
     ResearchOrchestrator,
     ResearchPlan,
@@ -57,7 +56,6 @@ export class WorkflowManager extends EventEmitter {
     private workflows: Map<string, WorkflowState> = new Map();
     private codeDevUrl: string;
     private docGenUrl: string;
-    private crawlerUrl: string;
 
     constructor(
         private config: {
@@ -72,9 +70,6 @@ export class WorkflowManager extends EventEmitter {
         this.docGenUrl = `http://${
             process.env.DOC_GEN_HOST || "doc_generator"
         }:${process.env.DOC_GEN_PORT || "5001"}`;
-        this.crawlerUrl = `http://${
-            process.env.CRAWLER_HOST || "research_crawler"
-        }:${process.env.CRAWLER_PORT || "5000"}`;
     }
 
     public async generateClarificationQuestions(
@@ -185,7 +180,7 @@ Return as a JSON array of question strings.
 
         try {
             // Monitor research progress
-            this.config.researchOrchestrator.on("crawl:progress", (data) => {
+            this.config.researchOrchestrator.on("crawl:progress", (_data) => {
                 const currentProgress = this.getStageProgress(
                     sessionId,
                     ResearchStage.RESEARCH
@@ -216,7 +211,7 @@ Return as a JSON array of question strings.
 
             return results;
         } catch (error) {
-            this.recordError(sessionId, ResearchStage.RESEARCH, error.message);
+            this.recordError(sessionId, ResearchStage.RESEARCH, error instanceof Error ? error.message : String(error));
             throw error;
         }
     }
@@ -250,7 +245,7 @@ Return as a JSON array of question strings.
                 100
             );
         } catch (error) {
-            this.recordError(sessionId, ResearchStage.RESEARCH, error.message);
+            this.recordError(sessionId, ResearchStage.RESEARCH, error instanceof Error ? error.message : String(error));
             throw error;
         }
     }
@@ -339,7 +334,7 @@ Return as a JSON array of question strings.
             this.recordError(
                 sessionId,
                 ResearchStage.DEVELOPMENT,
-                error.message
+                error instanceof Error ? error.message : String(error)
             );
             throw error;
         }
@@ -392,7 +387,7 @@ Return as a JSON array of question strings.
 
             return testResults;
         } catch (error) {
-            this.recordError(sessionId, ResearchStage.TESTING, error.message);
+            this.recordError(sessionId, ResearchStage.TESTING, error instanceof Error ? error.message : String(error));
             throw error;
         }
     }
@@ -504,7 +499,7 @@ Return as a JSON array of question strings.
             this.recordError(
                 sessionId,
                 ResearchStage.DOCUMENTATION,
-                error.message
+                error instanceof Error ? error.message : String(error)
             );
             throw error;
         }
@@ -557,13 +552,15 @@ Return as a JSON array of question strings.
             const saved = await this.config.redis.get(`workflow:${sessionId}`);
             if (saved) {
                 workflow = JSON.parse(saved);
-                this.workflows.set(sessionId, workflow);
+                if (workflow) {
+                    this.workflows.set(sessionId, workflow);
+                }
             } else {
                 throw new Error("Workflow not found");
             }
         }
 
-        return workflow;
+        return workflow!;
     }
 
     // Helper methods
@@ -751,7 +748,7 @@ Return as a JSON array of question strings.
         projectId: string,
         maxRetries: number = 3
     ): Promise<any> {
-        let lastError: Error;
+        let lastError: Error | undefined;
 
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
@@ -774,7 +771,7 @@ Return as a JSON array of question strings.
                     await this.delay(5000); // Wait 5 seconds before retry
                 }
             } catch (error) {
-                lastError = error;
+                lastError = error instanceof Error ? error : new Error(String(error));
                 if (attempt < maxRetries - 1) {
                     await this.delay(5000);
                 }

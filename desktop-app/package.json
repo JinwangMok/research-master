@@ -10,13 +10,14 @@
         "test": "react-scripts test",
         "eject": "react-scripts eject",
         "electron": "electron .",
-        "electron-dev": "ELECTRON_IS_DEV=1 electron .",
-        "dev": "concurrently \"npm start\" \"wait-on http://localhost:3001 && npm run electron-dev\"",
+        "electron-dev": "cross-env ELECTRON_IS_DEV=1 electron .",
+        "dev": "concurrently \"cross-env BROWSER=none npm start\" \"wait-on http://localhost:3000 && npm run electron-dev\"",
         "pack": "electron-builder --dir",
         "dist": "npm run build && electron-builder",
         "dist:win": "npm run build && electron-builder --win",
         "dist:mac": "npm run build && electron-builder --mac",
-        "dist:linux": "npm run build && electron-builder --linux"
+        "dist:linux": "npm run build && electron-builder --linux",
+        "lint": "eslint src/**/*.{ts,tsx}"
     },
     "dependencies": {
         "@emotion/react": "^11.11.1",
@@ -32,13 +33,17 @@
         "@types/react": "^18.2.45",
         "@types/react-dom": "^18.2.18",
         "@types/node": "^20.10.5",
+        "@typescript-eslint/eslint-plugin": "^5.62.0",
+        "@typescript-eslint/parser": "^5.62.0",
         "concurrently": "^8.2.2",
+        "cross-env": "^7.0.3",
         "electron": "^28.0.0",
         "electron-builder": "^24.9.1",
         "electron-is-dev": "^2.0.0",
         "electron-reload": "^2.0.0-alpha.1",
+        "eslint": "^8.56.0",
         "react-scripts": "5.0.1",
-        "typescript": "^5.3.3",
+        "typescript": "^4.9.5",
         "wait-on": "^7.2.0"
     },
     "build": {
@@ -53,18 +58,24 @@
             "assets/**/*",
             "node_modules/**/*"
         ],
-        "mac": {
-            "category": "public.app-category.developer-tools",
-            "icon": "assets/icon.icns"
-        },
         "win": {
             "target": "nsis",
             "icon": "assets/icon.ico"
+        },
+        "mac": {
+            "category": "public.app-category.developer-tools",
+            "icon": "assets/icon.icns"
         },
         "linux": {
             "target": "AppImage",
             "icon": "assets/icon.png"
         }
+    },
+    "eslintConfig": {
+        "extends": [
+            "react-app",
+            "react-app/jest"
+        ]
     },
     "browserslist": {
         "production": [

@@ -4,7 +4,6 @@ import { EventEmitter } from "events";
 import { Redis } from "ioredis";
 import { OllamaService, ResearchPrompts } from "../services/ollama";
 import axios from "axios";
-import * as cheerio from "cheerio";
 
 export interface ResearchPlan {
     id: string;
@@ -195,7 +194,7 @@ Create a detailed research plan that includes:
             this.emit("research:completed", { sessionId, result });
             return result;
         } catch (error) {
-            this.emit("research:error", { sessionId, error: error.message });
+            this.emit("research:error", { sessionId, error: error instanceof Error ? error.message : String(error) });
             throw error;
         }
     }
@@ -221,7 +220,7 @@ Create a detailed research plan that includes:
                     count: sourcePapers.length,
                 });
             } catch (error) {
-                this.emit("crawl:error", { source, error: error.message });
+                this.emit("crawl:error", { source, error: error instanceof Error ? error.message : String(error) });
             }
         }
 
@@ -321,7 +320,7 @@ Create a detailed research plan that includes:
 
             return response.data.papers || [];
         } catch (error) {
-            console.error(`Failed to crawl ${source}:`, error.message);
+            console.error(`Failed to crawl ${source}:`, error instanceof Error ? error.message : String(error));
             return [];
         }
     }
@@ -437,6 +436,9 @@ Research Topic: ${plan.topic}
 
 Research Questions:
 ${plan.researchQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}
+
+Analyzed Papers:
+${papers.slice(0, 5).map((p, i) => `${i + 1}. "${p.title}" (${p.year}): ${p.abstract.substring(0, 100)}...`).join("\n")}
 
 Based on the analyzed papers, identify 3-5 significant research gaps that haven't been adequately addressed.
 Consider:

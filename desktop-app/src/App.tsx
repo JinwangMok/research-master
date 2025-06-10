@@ -36,9 +36,8 @@ import {
     Send,
     PlayArrow,
     Download,
-    Refresh,
     CheckCircle,
-    Error,
+    Error as ErrorIcon,
     Code,
     Description,
     Slideshow,
@@ -98,6 +97,40 @@ interface ClarificationQuestion {
     answer?: string;
 }
 
+interface ResearchResults {
+    synthesis: string;
+    gaps: string[];
+    proposedApproach: string;
+    papers?: any[];
+    technicalDetails?: any[];
+}
+
+interface DevelopmentStatus {
+    status: string;
+    progress: number;
+    filesCreated: number;
+    coverage: number;
+    lastCommit?: string;
+}
+
+interface TestResults {
+    passed: number;
+    failed: number;
+    skipped: number;
+    total: number;
+    coverage: {
+        lines: number;
+        functions: number;
+        branches: number;
+    };
+}
+
+interface Document {
+    type: string;
+    format: string;
+    filename: string;
+}
+
 // Main App Component
 const App: React.FC = () => {
     const [socket, setSocket] = useState<Socket | null>(null);
@@ -111,10 +144,12 @@ const App: React.FC = () => {
         WorkflowProgress[]
     >([]);
     const [logs, setLogs] = useState<string[]>([]);
-    const [researchResults, setResearchResults] = useState<any>(null);
-    const [developmentStatus, setDevelopmentStatus] = useState<any>(null);
-    const [testResults, setTestResults] = useState<any>(null);
-    const [documents, setDocuments] = useState<any[]>([]);
+    const [researchResults, setResearchResults] =
+        useState<ResearchResults | null>(null);
+    const [developmentStatus, setDevelopmentStatus] =
+        useState<DevelopmentStatus | null>(null);
+    const [testResults, setTestResults] = useState<TestResults | null>(null);
+    const [documents, setDocuments] = useState<Document[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [tabValue, setTabValue] = useState(0);
@@ -154,7 +189,7 @@ const App: React.FC = () => {
             updateWorkflowProgress(data.stage, "in_progress", 50);
         });
 
-        socketInstance.on("research:completed", (results: any) => {
+        socketInstance.on("research:completed", (results: ResearchResults) => {
             setResearchResults(results);
             updateWorkflowProgress(ResearchStage.RESEARCH, "completed", 100);
             addLog("Research phase completed");
@@ -183,8 +218,8 @@ const App: React.FC = () => {
             );
         });
 
-        socketInstance.on("mcp:error", (error: any) => {
-            setError(error.error);
+        socketInstance.on("mcp:error", (errorData: any) => {
+            setError(errorData.error || "An error occurred");
             setLoading(false);
         });
 
@@ -279,7 +314,7 @@ const App: React.FC = () => {
             });
 
             socket.once("mcp:response", (response: any) => {
-                if (response.result.needsMoreClarification) {
+                if (response.result?.needsMoreClarification) {
                     // More questions
                     setQuestions(
                         response.result.questions.map((q: string) => ({
@@ -367,7 +402,9 @@ const App: React.FC = () => {
         });
 
         socket.once("mcp:response", (response: any) => {
-            setDocuments(response.result.documents);
+            if (response.result?.documents) {
+                setDocuments(response.result.documents);
+            }
             setLoading(false);
             addLog(`${format.toUpperCase()} document generated`);
         });
