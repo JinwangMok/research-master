@@ -1,0 +1,200 @@
+version: "3.8"
+
+services:
+    # Ollama LLM Engine
+    ollama:
+        image: ollama/ollama:latest
+        deploy:
+            replicas: 1
+            resources:
+                reservations:
+                    devices:
+                        - driver: nvidia
+                          count: 1
+                          capabilities: [gpu]
+                limits:
+                    memory: 8G
+        environment:
+            - OLLAMA_MODELS=/models
+            - OLLAMA_GPU_MEMORY=7GB
+            - CUDA_VISIBLE_DEVICES=0
+        volumes:
+            - ollama_models:/models
+            - /var/run/docker.sock:/var/run/docker.sock
+        networks:
+            - research_net
+        ports:
+            - "11434:11434"
+
+    # MCP Server
+    mcp_server:
+        image: research-mcp-server:latest
+        build:
+            context: ./mcp-server
+            dockerfile: Dockerfile
+        deploy:
+            replicas: 1
+            resources:
+                limits:
+                    memory: 2G
+        environment:
+            - NODE_ENV=production
+            - REDIS_HOST=redis
+            - OLLAMA_HOST=ollama
+            - OLLAMA_PORT=11434
+        volumes:
+            - ./workspace:/workspace
+            - ./logs:/logs
+        networks:
+            - research_net
+        ports:
+            - "3000:3000"
+            - "3001:3001" # WebSocket
+        depends_on:
+            - redis
+            - ollama
+
+    # Research Crawler
+    research_crawler:
+        image: research-crawler:latest
+        build:
+            context: ./research-crawler
+            dockerfile: Dockerfile
+        deploy:
+            replicas: 2
+            resources:
+                limits:
+                    memory: 2G
+        environment:
+            - REDIS_HOST=redis
+            - SCHOLAR_API_KEY=${SCHOLAR_API_KEY}
+            - IEEE_API_KEY=${IEEE_API_KEY}
+            - CRAWLER_CACHE_DIR=/cache
+        volumes:
+            - ./research_data:/data
+            - crawler_cache:/cache
+        networks:
+            - research_net
+        depends_on:
+            - redis
+
+    # Code Developer
+    code_developer:
+        image: code-developer:latest
+        build:
+            context: ./code-developer
+            dockerfile: Dockerfile
+        deploy:
+            replicas: 1
+            resources:
+                limits:
+                    memory: 2G
+        environment:
+            - GIT_USER_NAME=${GIT_USER_NAME}
+            - GIT_USER_EMAIL=${GIT_USER_EMAIL}
+            - VSCODE_SERVER_PORT=8080
+        volumes:
+            - ./workspace:/workspace
+            - ./git_repos:/repos
+            - /var/run/docker.sock:/var/run/docker.sock
+        networks:
+            - research_net
+        ports:
+            - "8080:8080" # VSCode Server
+
+    # Testing Container
+    testing_runner:
+        image: testing-runner:latest
+        build:
+            context: ./testing-runner
+            dockerfile: Dockerfile
+        deploy:
+            replicas: 2
+            resources:
+                limits:
+                    memory: 2G
+        environment:
+            - TEST_TIMEOUT=300
+            - COVERAGE_THRESHOLD=80
+        volumes:
+            - ./workspace:/workspace
+            - ./test_results:/results
+        networks:
+            - research_net
+
+    # Document Generator
+    doc_generator:
+        image: doc-generator:latest
+        build:
+            context: ./doc-generator
+            dockerfile: Dockerfile
+        deploy:
+            replicas: 1
+            resources:
+                limits:
+                    memory: 2G
+        environment:
+            - LATEX_TEMPLATE=ieee
+            - OUTPUT_DIR=/output
+        volumes:
+            - ./workspace:/workspace
+            - ./documents:/output
+            - ./templates:/templates
+        networks:
+            - research_net
+
+    # Redis Cache
+    redis:
+        image: redis:7-alpine
+        deploy:
+            replicas: 1
+            resources:
+                limits:
+                    memory: 1G
+        command: redis-server --maxmemory 1gb --maxmemory-policy allkeys-lru
+        volumes:
+            - redis_data:/data
+        networks:
+            - research_net
+        ports:
+            - "6379:6379"
+
+    # Nginx Reverse Proxy
+    nginx:
+        image: nginx:alpine
+        deploy:
+            replicas: 1
+            resources:
+                limits:
+                    memory: 512M
+        volumes:
+            - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+            - ./nginx/ssl:/etc/nginx/ssl:ro
+        networks:
+            - research_net
+        ports:
+            - "80:80"
+            - "443:443"
+        depends_on:
+            - mcp_server
+
+networks:
+    research_net:
+        driver: overlay
+        attachable: true
+
+volumes:
+    ollama_models:
+        driver: local
+    redis_data:
+        driver: local
+    crawler_cache:
+        driver: local
+
+configs:
+    nginx_config:
+        file: ./nginx/nginx.conf
+
+secrets:
+    api_keys:
+        file: ./secrets/api_keys.json
